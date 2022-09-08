@@ -126,7 +126,154 @@ With the addition of verifiable credential validaton logic the foregoing capabil
 Essentially an enhanced SKWA implementation may be used to validate KELs for full KERI AIDS but is not able to use its own AID to perform more sophisticated functions like issuing verifiable credentials or delegating identifiers or using indirect-mode.
 
  
- 
+ # Cloud Agent Access control and Key Store Management Architecture
+
+## Why the AEID is Non-transferable
+
+The keys in the key store are encrypted at rest (persistent storage, disk, etc) using assymetric encryption. A public encryption key may be stored on disk and loaded at boot tome so that any new secrets are encrypted. In order to decrypt however, the private decryption key is needed. This must only be provided at run time and must only be stored in memory. Without access to the private decryption key an attacker is not able to discover any encrypted secrets in the keystore. Providing the private decryption key is both an authenticating and authorizing action as it unlocks the encrypted secrets that then may be used to sign. The AEID (Authentication/ Authorization, Encryption ID) is a non-transferable AID derived from an Ed25519 key-pair. The key store asymmetric encryption/decryption key pair is an X25519 key-pair derived from the Ed25519 key pair. Consequently, providing the Ed25519 private key is tantamount to providing the X25519 decryption key. 
+
+Recall that KERI pre-rotation does not prevent compromise of signing keys. It just enables the controller of an identifier to re-establish control over the identifier by revoking the compromised signing key and replacing it with a new one (pre-rotated key). Damage done due to compromise before rotation recovery has occurred is not prevented. As mentioned above, the AEID is used to derive a decryption key to decrypt secrets in the keep (key store). Should that key become compromised then the secrets in the key store may also become compromised. Doing a rotation to revoke the compromised decryption key does not repair the damage of the compromise of the secrets in the key store. That damage is unrecoverable, unrepairable. Consequently there is no advantage to using a transferable identifier that requires a KEL for the AEID. It just adds complexity for no increase in security. Protection from compromise in the first place is essential to protecting a key store of secrets. Consequently the mechanisms that provide the AEID at run time to unlock the secrets and protecting that AEID do not benefit from KERI pre-rotation. 
+
+
+
+## Major Variants
+There are three major variants of the architecture and several minor variants of each major variant.
+
+The first major variants employs SKWA (Simple KERI for Web Auth) to mutually authenticate a web client (GUI) and a cloud hosted web server run by the controller that also hosts the key store in the cloud of some set of KERI public (indirect mode) AIDs (autonomic identifiers). The web client controller's ID is denoted CCID. The web server's ID is denoted ACID.
+
+The second major variant employs SKWA for the web client to authenticate with locally hosted web server  that also hosts the key store. Because the key store is under local control the local controller but may not authenticate itself to the web client or may only use a non-transferable identifier for that authentication (LCID NT). The web client still authenticates to the local web server using a SKWA CCID.
+
+The third major variant does not employ SKWA at all because both the controller with key store and the web client are local and are bundled together. The bundled processes may either employ no mutual authentication or both the web client and server may mutually authenticate usin non-transferable identifiers (AEID NT and LCID NT).
+
+In all cases the AEID must be provided by the user via the client at boot-up or while running in order to unlock the key store run by the controller. This acts as a type of password-less login when no other mechanism is employed. When other identifiers CCID or ACID or LCID are employed then the private key for each identifier respectively must be provided at boot-up to enable authentication. These private keys then provide a type of password-less login for each respective process.
+
+
+
+
+## Cloud Agent Controller Variant
+
+In the first major variant both the controller and the keep (keystore) for the AIDs reside on a cloud host.  The controller is called a cloud agent controller. In this major variant the cloud agent controller also has a SKWA AID that it uses to authenticate itself to the local web client controller. In this case SKWA is being used in Duo mode to mutually authenticate the cloud agent controller and the web client controller. The SKWA cloud agent controller ID is denoted ACID. The ACID and CCID are used to create an encrypted channel in order that the client may send the AEID private signing key (SigKey) used to derive the keep's private decryption key used to decrypt its secrets.
+
+
+The minor variants for the first major variant arise from a difference in the configuration of the local web client. In the first minor variant the keep key store authentication and encryption ID (AEID) is distinct from the web client controller's ID (CCID). Recall that the CCID is a SKWA transferable identifier. Whereas the keep AEID is always a non-transferable identifier whose identifier includes its public signature verification key (VerKey). In the second minor variant the AEID key pair is the same as the CCID key pair and whenever the CCID rotates its keys the AEID changes to match. The identifiers are not the same but the key-pairs track. The advantage of the latter approach is the client need only manage one set of key-pairs (current signing and pre-rotated next) for both authentication and encryption as the CCID and AEID share the same keys. Whereas in the former the client must manage two independent sets of key-pairs, one for the CCID and one for the AEID but the AEID key pair is somewhat less exposed.
+
+The following two figures illustrate the minor variants of the first major variant. 
+
+![Variant 1.A](https://i.imgur.com/VkZcopb.png)  
+Variant 1.A  
+
+![Variant 1.B](https://i.imgur.com/Z4j8Fqn.png)  
+Variant 1.B  
+
+
+
+
+## Local Controller with Cloud Forwarding Agent
+
+In the second major variant the controller and keep for the AIDs reside on a local host and a remote cloud agent forwarder acts as store and forward mailbox for requests to the local controller. In this second major variant the local controller runs two different web servers. The first is remote web server with an external port to connect to the cloud agent forwarder and the second is a local web server with a local port to connect to the web client GUI browser.
+
+The minor variants for the second major variant include the minor variants above plus one more set of variants due a variation that arises from the security postures of the local controller and web client controller.
+
+### Security Posture
+When the local controller server process and web client controller browser process are both run locally on a device or devices in the possession of a user (natural person) who controls the keys to both the local controller and the web client controller then those two processes may be deemed to be either fully secure or somewhat secure. It is assumed in this case that the inter-process communication between processes is not observable by an attacker and the the memory of each process is not observable by any attacker. Inter-process communication is generalized to include all forms such as IP (TCP or UDP) and the file system (files, pipes, Unix Domain sockets). To better express this generalization the term local network is used to mean all forms of inter-process communication whether intra-host or inter-host. Obviously secure non-observable inter-host communication may be extremely difficult to achieve. 
+When one of these processes is either fully or somewhat secure, i.e. is under control of the user both at boot and while running in protected memory then the process may use a non-transferable (ephemeral, non-rotatable keys) identifier to authenticate itself to the other fully or somewhat secure processes on the same or other devices. Assuming the network is fully secure. This is because (as described previously) the key store does not benefit from pre-rotation and the user may simply change ephemeral identifiers as needed at boot-up of the processes under user control.  
+
+#### Fully Secure
+A process running a server or client is deemed to be fully (continuously) secure with respect to user control (authorization) if the device running that process is always in (never leaves) the user's physical possession while running that process including the boot-up of that process by that user and that device never leave's the user's physical possession otherwise. In addition its network connection (inter-process communication) to any other process is also not observable by any attacker. Another way of stating this is the fully secure means that the processes and local network connections between those processes are continuously protected by the user's continuous physical possession of the devices running those processes and the network connections between them. Only the user may boot-up and run a fully secure process on a given device and only that user may observe the inter-process communication between that process and any other process. 
+
+#### Somewhat Secure
+A process running a server or client is deemed to be somewhat secure with respect to user control (authorization) if the device running that process is always in the user's physical possession while running that process including the boot-up of that process by that user but the device may not be continuously in the user's possession otherwise. In addition its network connection (inter-process communication) to any other process is also not observable by any attacker.  In this case, the private signing key of a non-transferable KERI AID (ephemeral non-rotatable keys) is entered into the process memory at boot-up by the user in order to authenticate that process to any other local processes. As long as the process runs it will be able to authenticate with the private signing key of its ephemeral ID. The other local processes must be given that ephemeral ID by the user at their boot-up in order to verify the somewhat secure process's signed messages. Should the process stop running then it will lose its private signing key and will no longer be able to authenticate to any other process. 
+
+#### Process and Inter-Process Security
+In general modern OSes used for servers and desktops that include the many Unix Variants (Linux, MacOS, BSD) and Windows use protected memory for each process. Once a given process is booted and running no other process may easily observe that processes internal memory. This means that if a process is provided a secret at bootup, which secret only ever resides in that process's internal memory then a later exploit that allows an attacker to run another process even with full root permissions may not easily observe that secret.  If the exploit occurs before the process boots then an attacker with root permissions may have installed a key logger or other observation process that observers the entry of the secret. With regards inter-process communication, if an attacker has full root permissions while any two processes are running and those processes use an operating system shared resource such as the file system which includes pipes and Unix domain sockets or the IP stack then that attacker may easily observe any secrets sent in the clear between those two processes.
+Various more sophisticated side channel exploits may allow an attacker to observe secrets even when only in protected memory. This is why the architecture described here is meant to  address the bootstrap of resources that contribute to a threshold structure protection mechanism. 
+
+#### Authentication and Encryption
+
+When a process is deemed fully secure it may send its messages unsigned to the other local processes.  If the inter-process (network) communication is also fully secure then it may send any secrets in the clear to any other fully secure process. If, however, the other process is only somewhat secure but the network is still fully secure then it may send secrets in the clear but only in response to an authenticated request from a somewhat secure process.  
+
+When a process is deemed somewhat secure it must sign its messages to other local processes.
+
+When two communicating processes are both deemed somewhat secure then they must mutually authenticate all requests and responses and must send secrets as encrypted.
+
+When two fully secure communicating processes are communicating over a network that is also not fully secure then the processes must behave as if they are both only somewhat secure, that is, they mutually authenticate and only send secrets encrypted.
+
+To clarify, when a process is deemed to be fully secure with respect to user control it does not need to authenticate itself to other local processes also under user control either fully or somewhat secure. When a process is deemed somewhat secure with respect to user control it needs to authenticate itself  to other local processes also under user control either fully or somewhat secure. It may use a  non-transferable (ephemeral) KERI self-certifying identifier (non-rotating keys) for that authentication. 
+
+
+### Local Variants
+
+
+When the local controller is fully secure but the web client is somewhat secure  then there is no need to authenticate the local controller to the web client but there is still a need to authenticate the web client to the local controller. In this case the local controller does not authenticate to the local web client controller but the web client controller still authenticates to the local controller. Likewise the communication of the AEID private signing key (SigKey) from the client to the controller is not encrypted because it is only stored in memory and given that the AEID SigKey is already in the possession of a somewhat secure web client controller then sending the AEID SigKey in the clear from a somewhat secure web client to a fully secure local controller does not detract from its security as long at the AEID SigKey is only ever stored in memory on both. 
+
+Conversely, when the local controller is somewhat secure then it employs a non-transferable identifier created at boot time to authenticate itself to the client. This local controller identifier is denoted LCID. The LCID is also used with the CCID to create an encrypted channel to encrypt the communication of the AEID in order that the client may send as encrypted the AEID private signing key (SigKey) used to derive  the keep's private decryption key used to decrypt its secrets.
+
+The following four figures illustrate the minor variants of the second major variant. 
+
+
+![Variant 2.A](https://i.imgur.com/CMMz6h1.png)  
+Variant 2.A  
+
+![Variant 2.B](https://i.imgur.com/Zy4CVut.png)  
+Variant 2.B  
+
+![Variant 2.c](https://i.imgur.com/wDhETsi.png)  
+Variant 2.C  
+
+![Variant 2.D](https://i.imgur.com/vQ3br3c.png)  
+Variant 2.D  
+
+
+## Bundled Local Controller and local Web Client Controller with Cloud Forwarding Agent
+
+In the third major variant a self-contained bundled application is created using Electron and PyInstaller. The bundle includes both the python local controller process and javascrypt web application client browser process. 
+
+When the bundle is fully secure then the local controller and web client controller may be treated as the same controller. The AEID private signing key (SigKey) may then be used as a password-less login by the user to authenticate the user to the bundle and unlock the secrets in the key store. This also implicitly authorizes the bundle to perform singing operations on the user's behalf. The AEID (SigKey) must only be stored in memory. The bundle application may further enhance security by timing out after some brief period of inactivity on behalf of the user so that the user has to re-enter the AEID SigKey. This provides a timed session that prevents unattended access to the user interface of the bundle.
+
+When the bundle is only somewhat secure as may be the case when the interprocess communication within the bundle is not fully secure (observable by an attacker) then both processes mutually authenticate using a nontransferable identifier. The local controller uses the LCID and the web client controller uses the AEID. In this case secrets sent between the processes are encrypted.
+
+The advantage of the bundle is that SKWA is not required and in both the fully secure case and somewhat secure cases only the minimum amount of key management is required for the user.
+
+The following two figures illustrate the minor variants of the third major variant. 
+
+![Variant 3.A](https://i.imgur.com/XdzUGhl.png)  
+Variant 3.A  
+
+![Variant 3.B](https://i.imgur.com/ehnbmqC.png)  
+Variant 3.B  
+
+
+## Cloud Bootstrap Procedures
+
+### Cloud Agent Controller
+
+Upon first boot-up of the cloud agent controller  server process the IT person must create the SKWA ACID and inject its signing key to be stored in memory. The ACID does not use the keep to manage its keys. They must be manged externally by the IT person responsible for managing the Cloud Agent Server process. The IT person may use SSH to setup and configure the Cloud Agent Server Process. The ACID private keys must never be persisted on the server but only in memory at boot up of the process. Every time the process is rebooted the private key must be re-injected by the IT admin.
+
+The ACID identifier must be published or shared with the web client controller using an OOB (Out-Of-Band) mechanism.
+
+Likewise the config of the cloud agent must include the CCID of the web client controller that was shared to the IT admin via an OOB mechanism.
+
+The pair ACID-CCID may now mutually authenticate and create a DH (Diffie-Hellman) key exchange so that the Web Client may initialize the keep with its AEID private signing key (SigKey) used to created the keep's encryption/decryption keys.
+
+### Web Client Controller
+
+The web client controller creates a key pair and uses that to create a SKWA CCID. The user of the web client controller must inject that private signing key into memory on the browser. The CCID must be shared via OOB mechanism to the IT person managing the cloud agent. Likewise the ACID is shared with the web client user.
+
+The CCID private keys are never persisted in browser persistent storage but must only reside in memory. Every time the user restarts a browsing session with the cloud agent the private signing key for the CCID must be re-injected.
+
+The pair ACID-CCID may now mutually authenticate and create a DH (Diffie-Hellman) key exchange so that the Web Client may initialize the keep with its AEID private signing key (SigKey) used to created the keep's encryption/decryption keys.
+
+### Cloud Agent Forwarder (Mailbox)
+The Cloud Agent Forwarder uses a non-transferable AID denoted AFID. It uses its AFID to sign messages it forwards to the local controller so that the local controller may authenticate that those messages came from a recognized forwarder. The IT person responsible for managing the forwarder creates the AFID on boot-up and injects its private key into memory. The key may also be stored on disk because the forwarder itself is not controlling a KEL. A compromised forwarder key merely is a DDOS attack not a security attack. The IT person shares the AFID with the local controller using an OOB mechanism. The local controller then stores the AFID as a recognized forwarder similar to a watcher. A given configuration may choose to employ a pool of forwarders that share forwards in order to provide high availability. The local controller may then choose to load balance its use of any given forwarder.
+
+
+### When CCID and AEID share the same key pair.
+
+In this case there must be logic in the controller to check any attempt to change the AEID so that it matches a authenticated rotation of the CCID.
+
+Sharing keys between the CCID and AEID may significantly simplify key management on the part of the web client user because that user need only protect one set of key pairs instead of two. In this case when the CCID is rotated then a new non-transferable AEID is created using the new CCID key pair. This provides no security advantage but merely simplifies key managment for the web client user. 
+
+In this case (shared keys between) the CCID and AEID, the private signing key used to derive the private decryption key is more exposed through its use to sign requests from the web client to the server controller. EdDSA (Ed25519) digital signing keys are meant to be used for signatures in volume and are designed to be highly resistant to attack. The Libsodium version of Ed25519 (Ed25519-IETF) has been shown to be SUF-CMA (Strong Unforgeability to Chosen Message Attack) and is highly resistant to key substitution attacks [Provable Security of Ed25519](https://eprint.iacr.org/2020/823.pdf). SUF-CMA is the highest level of strength for digital signatures and makes it extremely unlikely that an adversary could ever forge a valid signature without knowing the private key in spite of a corpus of signed messages. Consequently increased weakness as a result of exposure due to more frequent use when sharing keys for both the CCID and AEID may not be significant. Nonetheless out of caution when the CCID and AEID share the same keys then the keys should be rotated more frequently than when not.
 
 https://hackmd.io/AXJ35eciSCa04FtG5Yg9Zg
 
