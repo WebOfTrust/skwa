@@ -275,7 +275,11 @@ Sharing keys between the CCID and AEID may significantly simplify key management
 
 In this case (shared keys between) the CCID and AEID, the private signing key used to derive the private decryption key is more exposed through its use to sign requests from the web client to the server controller. EdDSA (Ed25519) digital signing keys are meant to be used for signatures in volume and are designed to be highly resistant to attack. The Libsodium version of Ed25519 (Ed25519-IETF) has been shown to be SUF-CMA (Strong Unforgeability to Chosen Message Attack) and is highly resistant to key substitution attacks [Provable Security of Ed25519](https://eprint.iacr.org/2020/823.pdf). SUF-CMA is the highest level of strength for digital signatures and makes it extremely unlikely that an adversary could ever forge a valid signature without knowing the private key in spite of a corpus of signed messages. Consequently increased weakness as a result of exposure due to more frequent use when sharing keys for both the CCID and AEID may not be significant. Nonetheless out of caution when the CCID and AEID share the same keys then the keys should be rotated more frequently than when not.
 
+# Hackmd Source Documents
+
 https://hackmd.io/AXJ35eciSCa04FtG5Yg9Zg
 
 https://github.com/WebOfTrust/keri-skwa.git
+
+https://hackmd.io/2xIuooE1Qk6mkSHdx01uJA
 
