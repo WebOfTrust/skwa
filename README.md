@@ -100,6 +100,33 @@ Libsodium also supports crypto-box symmetric encryption. Cypto-box symmetric enc
 
 - Blake3 javascript package for the Black3 hash. This package has a rust wasm for the browser and a rust node.js for the server when using node.js on the server.  
 
+# Enhanced SKWA with Full KEL/KERL Validation
+
+One very useful enhancement to SKWA is to add support for the validation of the in-order, self-contained,  last-event-only (unforked), replay of a KEL or KERL for a non-SKWA limited AID. Recall that technically a KEL is a key event log with attached signatures and a KERL is a KEL that also includes the attached receipts of the witnesses. A direct-mode KERI AID has no witnesses while an indirect mode KERI AID does. Typically  for convenience, however, the term KEL may used to refer to both a proper KEL and a KERL unless it is not clear from the context. 
+
+An in-order, self-contained, last-event-only, replay of a KEL/KERL has the following properties:
+
+- All events appear in order of sn.
+- All events include as immediate attachments all controller signatures and witness receipts.
+- All events are the last event at a given sn from the set of events at that sn that arise from recovery rotation events.
+
+The in-order and immediate attachment requirements ensure that the Enhanced SKWA node may validate a KEL without needing asynchronous escrow processing of events. The requirement of last-only-events ensures that the Enhanced SKWA node may validate without the need to store KELs with forks of disputed events. This means that an enhanced SKWA node is thereby limited in its ability to detect or reconcile duplicity. It may have to depend on an external watcher, judge, or juror for that. 
+
+Validation of delegated identifiers by an enhanced SKWA imposes the following limitations on the replay of multiple KELs/KERLs:
+
+- The replay of any delegating KEL must appear before the replay of any of its delegated KELs.  
+
+Validation of TELS by an enhanced SKWA impose similar in-order, self-contained, last-event-only constraints on the replay of the TEL. An additional constraint is as follows:
+
+- The replay of any issuing KEL must appear before the replay of any of its associated TELS
+
+With the addition of verifiable credential validaton logic the foregoing capabilities would allow an enhanced SKWA to validate the issuance or revocation status of a verifiable credential.
+
+
+Essentially an enhanced SKWA implementation may be used to validate KELs for full KERI AIDS but is not able to use its own AID to perform more sophisticated functions like issuing verifiable credentials or delegating identifiers or using indirect-mode.
+
+ 
+ 
 
 https://hackmd.io/AXJ35eciSCa04FtG5Yg9Zg
 
