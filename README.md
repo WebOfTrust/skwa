@@ -220,8 +220,10 @@ Variant 2.B
 ![Variant 2.c](https://i.imgur.com/wDhETsi.png)  
 Variant 2.C  
 
-![Variant 2.D](https://i.imgur.com/vQ3br3c.png)  
+![Variant 2.D](https://hackmd.io/_uploads/ByfOE0Deo.png)
 Variant 2.D  
+
+
 
 
 ## Bundled Local Controller and local Web Client Controller with Cloud Forwarding Agent
