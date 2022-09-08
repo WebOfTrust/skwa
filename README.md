@@ -80,10 +80,10 @@ Notwithstanding the foregoing, any use case that places the next private key in 
 
 ## SKWA Encrypted Communication
 
-The Ed25519 signature key-pair of the SKWA identifier may be converted to an X25519 encryption/decryption key=pair. Depending on the operation mode (solo, or duo) This enables encrypted messages to sent to or from a SKWA node. 
+The Ed25519 signature key-pair of the SKWA identifier may be converted to an X25519 encryption/decryption key=pair. Depending on the operation mode (solo, or duo) This enables encrypted messages to sent to or from a SKWA node using either Asymmetric encryption or a DH exchange to create a shared symmetric key. 
 The specific format of an encrypted message body may be ReST API dependent. A suggested approach is to use a JSON body with a designated field whose value is the encrypted data in either CESR or Base64 format. Other fields in the body can indicate the details of the encrypted field if not obvious from the context. Another approach would use the whole message body for the encrypted data with a mime-type of text/plain with a header (TBD) to provide the encryption suite and appropriate identifiers. 
 
-Currently CESR supports codes X25519 encrypted salts (16 byte) and seeds (32 byte). The type of seed is context dependent. A future CESR code for variable length encrypted data may be specified. 
+Currently CESR supports codes X25519 encrypted salts (16 byte) and seeds (32 byte). The type of seed is context dependent. Future CESR code for variable length encrypted data may be specified (one each for asymmetric encryption and symmetric encryption). 
 
 ### Asymmetric Encryption
 LibSodium supports the secret-box asymmetric encryption/decryption. In solo mode, the SKWA node may use the X25519 equivalent of its Ed2519 key pair to either encrypt messages using the X25519 pubic key that it stores encrypted. It may decrypt those messages with its X25519 private key. Or another node or server may use the X25519 public key to encrypt messages to send to that SKWA node. A given ReST endpoint API may indicate 
@@ -261,7 +261,7 @@ The web client controller creates a key pair and uses that to create a SKWA CCID
 
 The CCID private keys are never persisted in browser persistent storage but must only reside in memory. Every time the user restarts a browsing session with the cloud agent the private signing key for the CCID must be re-injected.
 
-The pair ACID-CCID may now mutually authenticate and create a DH (Diffie-Hellman) key exchange so that the Web Client may initialize the keep with its AEID private signing key (SigKey) used to created the keep's encryption/decryption keys.
+The pair ACID-CCID may now mutually authenticate and either use two way asymmetric encryuption or create a DH (Diffie-Hellman) key exchange for shared key symmetric encryption, so that the Web Client may initialize the keep with its AEID private signing key (SigKey) used to created the keep's asymmetric encryption/decryption keys.
 
 ### Cloud Agent Forwarder (Mailbox)
 The Cloud Agent Forwarder uses a non-transferable AID denoted AFID. It uses its AFID to sign messages it forwards to the local controller so that the local controller may authenticate that those messages came from a recognized forwarder. The IT person responsible for managing the forwarder creates the AFID on boot-up and injects its private key into memory. The key may also be stored on disk because the forwarder itself is not controlling a KEL. A compromised forwarder key merely is a DDOS attack not a security attack. The IT person shares the AFID with the local controller using an OOB mechanism. The local controller then stores the AFID as a recognized forwarder similar to a watcher. A given configuration may choose to employ a pool of forwarders that share forwards in order to provide high availability. The local controller may then choose to load balance its use of any given forwarder.
