@@ -139,7 +139,7 @@ Recall that KERI pre-rotation does not prevent compromise of signing keys. It ju
 ## Major Variants
 There are three major variants of the architecture and several minor variants of each major variant.
 
-The first major variants employs SKWA (Simple KERI for Web Auth) to mutually authenticate a web client (GUI) and a cloud hosted web server run by the controller that also hosts the key store in the cloud of some set of KERI public (indirect mode) AIDs (autonomic identifiers). The web client controller's ID is denoted CCID. The web server's ID is denoted ACID.
+The first major variants employs SKWA (Simple KERI for Web Auth) to mutually authenticate a web client (GUI) and a cloud hosted web server run by the controller that also hosts the key store in the cloud of some set of KERI public (indirect mode) AIDs (autonomic identifiers). The web client controller's ID is denoted CCID for Client Controller ID. The web cloud agent server's ID is denoted ACID for (cloud) Agent Controller ID.
 
 The second major variant employs SKWA for the web client to authenticate with locally hosted web server  that also hosts the key store. Because the key store is under local control the local controller but may not authenticate itself to the web client or may only use a non-transferable identifier for that authentication (LCID NT). The web client still authenticates to the local web server using a SKWA CCID.
 
